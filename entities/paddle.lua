@@ -1,10 +1,12 @@
 Paddle = class('Paddle')
 
-function Paddle:initialize(x, y, range, domain)
+function Paddle:initialize(x, y, range, domain, offsetX, localPlayer)
 	self.x = range/2 -- x can vary from self.width/2 to range-self.width/2
 	self.y = y
 	self.range = range
 	self.domain = domain
+	self.offsetX = offsetX
+	self.localPlayer = localPlayer or true
 	
 	self.speed = 350
 	
@@ -14,7 +16,7 @@ end
 
 function Paddle:update(dt)
 	local scrnWidth, scrnHeight = love.graphics.getDimensions()
-	local mouseX = love.mouse.getX() - scrnWidth/2 + self.range/2 -- aligns mouse 0 with paddle 0
+	local mouseX = love.mouse.getX() - scrnWidth/2 + self.range/2 - self.offsetX -- aligns mouse 0 with paddle 0
 	
 	local lastX = self.x
 	
@@ -43,10 +45,10 @@ end
 function Paddle:draw()
 	local scrnWidth, scrnHeight = love.graphics.getDimensions()
 	
-	local x, y = (scrnWidth/2 - self.range/2 + self.x) - self.width/2, (scrnHeight/2 - self.domain/2 + self.y) - self.height/2
+	local x, y = (scrnWidth/2 - self.range/2 + self.x) - self.width/2 + self.offsetX, (scrnHeight/2 - self.domain/2 + self.y) - self.height/2
 	
-	love.graphics.setColor(0, 255, 0)
+	love.graphics.setColor(116, 204, 61)
 	love.graphics.rectangle('fill', x, y, self.width, self.height)
-	love.graphics.setColor(255, 255, 255)
+	love.graphics.setColor(225, 255, 224)
 	love.graphics.rectangle('line', x, y, self.width, self.height)
 end

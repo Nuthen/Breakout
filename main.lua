@@ -6,6 +6,8 @@ tween = require 'libs.tween'
 fx = require 'libs.fx'
 require 'libs.util'
 require 'libs.generalmath'
+require 'libs.tablestring'
+require 'enet'
 
 -- gamestates
 require 'states.menu'

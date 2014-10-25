@@ -1,11 +1,14 @@
 Map = class('Map')
 
-function Map:initialize(width, height, realWidth, realHeight)
+function Map:initialize(width, height, realWidth, realHeight, offsetX)
 	self.width = width
 	self.height = height
+	self.realWidth = realWidth   -- whole board
+	self.realHeight = realHeight -- whole board
+	self.offsetX = offsetX
 	
-	self.realWidth = realWidth -- whole board
-	self.realHeight = realHeight
+	self.color1 = {153, 100, 80}
+	self.color2 = {255, 100, 109}
 	
 	
 	self.paddingTop = 50
@@ -33,11 +36,11 @@ function Map:draw()
 
 	local scrnWidth, scrnHeight = love.graphics.getDimensions()
 	
-	local x, y = scrnWidth/2 - self.realWidth/2, scrnHeight/2 - self.realHeight/2
+	local x, y = scrnWidth/2 - self.realWidth/2 + self.offsetX, scrnHeight/2 - self.realHeight/2
 	
-	love.graphics.setColor(78, 78, 78)
+	love.graphics.setColor(153, 100, 80)
 	love.graphics.rectangle('fill', x, y, self.realWidth, self.realHeight)
-	love.graphics.setColor(255, 255, 255)
+	love.graphics.setColor(225, 255, 224)
 	love.graphics.rectangle('line', x, y, self.realWidth, self.realHeight)
 	
 	local x, y = x+self.paddingLeft, y+self.paddingTop
@@ -46,10 +49,14 @@ function Map:draw()
 	for iy = 1, self.height do
 		for ix = 1, self.width do
 			if self.tiles[iy][ix].tile == 1 then
-				love.graphics.setColor(math.floor((255/self.width)*ix), 0, math.floor((255/self.height)*iy))
+				local r = ((self.color2[1] - self.color1[1])/self.width)*ix + self.color1[1]
+				local b = ((self.color2[3] - self.color1[3])/self.width)*iy + self.color1[3]
+				--love.graphics.setColor(math.floor((255/self.width)*ix), 0, math.floor((255/self.height)*iy))
+				love.graphics.setColor(r, 100, b)
+				--love.graphics.setColor(255, 102, 109)
 				love.graphics.rectangle('fill', x + (ix-1)*width, y + (iy-1)*height, width, height)
 				
-				love.graphics.setColor(255, 255, 255)
+				love.graphics.setColor(225, 255, 224)
 				love.graphics.rectangle('line', x + (ix-1)*width, y + (iy-1)*height, width, height)
 			end
 		end
