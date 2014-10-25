@@ -9,6 +9,8 @@ function Map:initialize(width, height, realWidth, realHeight, offsetX)
 	
 	self.color1 = {153, 100, 80}
 	self.color2 = {255, 100, 109}
+	--self.color1 = {180, 165, 209}
+	--self.color2 = {115, 165, 98}
 	
 	
 	self.paddingTop = 50

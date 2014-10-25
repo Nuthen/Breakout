@@ -4,11 +4,11 @@ function game:enter(prev, hosting)
 	love.graphics.setBackgroundColor(27, 171, 137)
 
 	local offsetX = -250
-    self.map = Map:new(7, 15, 450, 600, offsetX, true)
+    self.map = Map:new(5, 5, 450, 600, offsetX, true)
 	self.paddle = Paddle:new(450/2, 600-40, 450, 600, offsetX, true)
 	self.ball = Ball:new(450/2, 600-100, 450, 600, offsetX, true)
 	
-	self.map2 = Map:new(7, 15, 450, 600, -offsetX)
+	self.map2 = Map:new(5, 5, 450, 600, -offsetX)
 	self.paddle2 = Paddle:new(450/2, 600-40, 450, 600, -offsetX, false)
 	self.ball2 = Ball:new(450/2, 600-100, 450, 600, -offsetX, false)
 	
@@ -16,10 +16,17 @@ function game:enter(prev, hosting)
 	self.lastSendPaddle = 0
 	self.lastSendBall = 0
 	
+	self.tilesLeft = 0
+	
 	-- networking
 	self.hosting = hosting
 	
-	self.start = false
+	self.state = 'waiting'
+	
+	self.levelCount = 1
+	
+	self.winner = nil
+	
 	-- server setup
 	if self.hosting then
 		self.ip = '*'
@@ -43,9 +50,46 @@ function game:enter(prev, hosting)
 	else
 		self.host = enet.host_create()
 		self.server = self.host:connect('69.137.215.69:22122')
+		--self.server = self.host:connect('localhost:22122')
 		self.host:compress_with_range_coder()
 		
 		self.timer = 0
+	end
+end
+
+function game:restart()
+	self.levelCount = self.levelCount + 1
+
+	self.timer = 0
+
+	local offsetX = -250
+    self.map = Map:new(7, 15, 450, 600, offsetX, true)
+	self.paddle = Paddle:new(450/2, 600-40, 450, 600, offsetX, true)
+	self.ball = Ball:new(450/2, 600-100, 450, 600, offsetX, true)
+	
+	self.map2 = Map:new(7, 15, 450, 600, -offsetX)
+	self.paddle2 = Paddle:new(450/2, 600-40, 450, 600, -offsetX, false)
+	self.ball2 = Ball:new(450/2, 600-100, 450, 600, -offsetX, false)
+	
+	
+	self.map.color1 = {math.random(255), math.random(255), math.random(255)}
+	self.map.color2 = {math.random(255), math.random(255), math.random(255)}
+	
+	self.map2.color1 = {math.random(255), math.random(255), math.random(255)}
+	self.map2.color2 = {math.random(255), math.random(255), math.random(255)}
+	
+	if self.levelCount == 3 then
+		for iy = 1, self.map.height do
+			for ix = 1, self.map.width do
+				-- assumes both maps are the same size
+				if ix > 2 and ix < self.map.width - 1 then
+					if iy % 3 < 2 then
+						self.map.tiles[iy][ix].tile = 0
+						self.map2.tiles[iy][ix].tile = 0
+					end
+				end
+			end
+		end
 	end
 end
 
@@ -64,10 +108,12 @@ function game:update(dt)
 			
 			if event.type == 'connect' then
 				--self.host:broadcast('t|'..math.floor(self.timer*100))
-				self.start = true
+				self.state = 'run'
+				self.timer = 0
 			elseif event.type == 'receive' then
 				if string.find(event.data, 'p|') == 1 then -- True if it is paddle data 
 					self.paddle2.x = string.gsub(event.data, 'p|', '')
+					
 				elseif string.find(event.data, 'b|') == 1 then -- True if it is ball data
 					local str = string.gsub(event.data, 'b|', '')
 					local ballTable = stringToTable(str)
@@ -97,6 +143,14 @@ function game:update(dt)
 					else
 						self.ball2.respawning = false
 					end
+					
+				elseif string.find(event.data, 'w|') == 1 then -- True if it is paddle data 
+					local winTime = string.gsub(event.data, 'w|', '')
+					
+					self.state = 'restart'
+					self.winner = {'Opponent', winTime}
+					game:restart()
+					return
 				end
 				
 			elseif event.type == 'disconnect' then
@@ -122,7 +176,8 @@ function game:update(dt)
 			self.peer = event.peer
 			
 			if event.type == 'connect' then
-				self.start = true
+				self.state = 'run'
+				self.timer = 0
 			
 			elseif event.type == 'receive' then
 				if string.find(event.data, 'p|') == 1 then -- True if it is paddle data 
@@ -157,6 +212,14 @@ function game:update(dt)
 					else
 						self.ball2.respawning = false
 					end
+					
+				elseif string.find(event.data, 'w|') == 1 then -- True if it is paddle data 
+					local winTime = string.gsub(event.data, 'w|', '')
+					
+					self.state = 'restart'
+					self.winner = {'Opponent', winTime}
+					game:restart()
+					return
 				end
 				
 			elseif event.type == 'disconnect' then
@@ -165,13 +228,21 @@ function game:update(dt)
 		end
 	end
 	
-	if self.start then
+	if self.state == 'restart' then
+		self.timer = self.timer + dt
+		if self.timer > 5 then -- pause time between rounds
+			self.state = 'run'
+			self.timer = 0
+			self.winner = nil
+		end
+	
+	elseif self.state == 'run' then
 		local paddleX = self.paddle.x
 		local ballAngle = self.ball.angle
 		local ballRespawning = self.ball.respawning
 	
 		self.paddle:update(dt)
-		local tileX, tileY = self.ball:update(dt)
+		local tileX, tileY, tilesLeft = self.ball:update(dt)
 		
 		-- if a tile is removed, a packet is sent out
 		if tileX and tileY then
@@ -186,9 +257,9 @@ function game:update(dt)
 		if self.paddle.x ~= paddleX then
 			if self.timer - self.lastSendPaddle > .5 then
 				if self.hosting then
-					self.host:broadcast('p|'..self.paddle.x)
+					self.host:broadcast('p|'..math.floor(self.paddle.x*100)/100)
 				else
-					self.peer:send('p|'..self.paddle.x)
+					self.peer:send('p|'..math.floor(self.paddle.x*100)/100)
 				end
 			end
 		end
@@ -197,9 +268,9 @@ function game:update(dt)
 		if math.floor(ballAngle*100)/100 ~= math.floor(self.ball.angle*100)/100 then
 			if self.timer - self.lastSendBall > .5 then
 				if self.hosting then
-					self.host:broadcast('b|'..self.ball.x..' '..self.ball.y..' '..self.ball.angle)
+					self.host:broadcast('b|'..math.floor(self.ball.x*100)/100 ..' '..math.floor(self.ball.y*100)/100 ..' '..math.floor(self.ball.angle*100)/100)
 				else
-					self.peer:send('b|'..self.ball.x..' '..self.ball.y..' '..self.ball.angle)
+					self.peer:send('b|'..math.floor(self.ball.x*100)/100 ..' '..math.floor(self.ball.y*100)/100 ..' '..math.floor(self.ball.angle*100)/100)
 				end
 			end
 		end
@@ -211,6 +282,19 @@ function game:update(dt)
 			else
 				self.peer:send('r|'..tostring(self.ball.respawning))
 			end
+		end
+		
+		-- checks if all tiles are gone
+		if tilesLeft == 0 then
+			if self.hosting then
+				self.host:broadcast('w|'..self.timer)
+			else
+				self.peer:send('w|'..self.timer)
+			end
+			
+			self.state = 'restart'
+			self.winner = {'You', self.timer}
+			game:restart()
 		end
 		
 		--self.paddle2:update(dt)
@@ -240,7 +324,7 @@ function game:draw()
 	self.ball2:draw()
 	
 	love.graphics.setColor(255, 255, 255)
-	love.graphics.print(love.timer.getFPS(), 5, 5)
+	love.graphics.print(love.timer.getFPS()..'FPS '..self.tilesLeft..' tiles', 5, 5)
 	
 	if self.hosting then
 		love.graphics.print('Running server on ' .. self.ip .. ':' .. self.port, 5, 25)
@@ -255,4 +339,13 @@ function game:draw()
         local msg = 'Last message: '..tostring(self.lastEvent.data)..' from '..tostring(self.peer:index())
         love.graphics.print(msg, 5, 65)
     end
+	
+	if self.peer then
+		love.graphics.print(self.peer:round_trip_time()..'ms', 5, 105)
+	end
+	
+	if self.state == 'restart' then
+		love.graphics.setFont(fontBold[32])
+		love.graphics.print(self.winner[1]..' won in '..math.floor(self.winner[2]*100)/100 ..' seconds!\nPrepare for a new round.', 200, 30)
+	end
 end
