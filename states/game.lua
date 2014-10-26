@@ -44,8 +44,8 @@ function game:enter(prev, hosting)
 	
 	else
 		self.host = enet.host_create()
-		self.server = self.host:connect('69.137.215.69:22122')
-		--self.server = self.host:connect('localhost:22122')
+		--self.server = self.host:connect('69.137.215.69:22122')
+		self.server = self.host:connect('localhost:22122')
 		self.host:compress_with_range_coder()
 		
 		self.timer = 0
@@ -122,8 +122,11 @@ function game:update(dt)
 					local iy = tonumber(tileTable[2])
 					local ix = tonumber(tileTable[1])
 					local tile = tonumber(tileTable[3])
+					local level = tonumber(tileTable[4])
 					
-					self.map2.tiles[iy][ix].tile = tile
+					if level == self.levelCount then
+						self.map2.tiles[iy][ix].tile = tile
+					end
 					
 				elseif string.find(event.data, 'r|') == 1 then -- True if it is paddle data 
 					local str = string.gsub(event.data, 'r|', '')
@@ -193,8 +196,11 @@ function game:update(dt)
 					local iy = tonumber(tileTable[2])
 					local ix = tonumber(tileTable[1])
 					local tile = tonumber(tileTable[3])
+					local level = tonumber(tileTable[4])
 					
-					self.map2.tiles[iy][ix].tile = tile
+					if level == self.levelCount then
+						self.map2.tiles[iy][ix].tile = tile
+					end
 					
 				elseif string.find(event.data, 'r|') == 1 then -- True if it is paddle data 
 					local str = string.gsub(event.data, 'r|', '')
@@ -247,9 +253,9 @@ function game:update(dt)
 		-- if a tile is removed, a packet is sent out
 		if tileX and tileY then
 			if self.hosting then
-				self.host:broadcast('t|'..tileX..' '..tileY..' '.. 0)
+				self.host:broadcast('t|'..tileX..' '..tileY..' '.. 0 ..' '..self.levelCount)
 			else
-				self.peer:send('t|'..tileX..' '..tileY..' '.. 0)
+				self.peer:send('t|'..tileX..' '..tileY..' '.. 0 ..' '..self.levelCount)
 			end
 		end
 		
