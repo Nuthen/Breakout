@@ -12,9 +12,16 @@ function Paddle:initialize(x, y, range, domain, offsetX, localPlayer)
 	
 	self.width = 80
 	self.height = 15
+	
+	self.bounceTimer = 0
+	self.bounceTimerMax = 2
 end
 
 function Paddle:update(dt)
+	if self.bounceTimer > 0 then
+		self.bounceTimer = self.bounceTimer - dt
+	end
+
 	local scrnWidth, scrnHeight = love.graphics.getDimensions()
 	local mouseX = love.mouse.getX() - scrnWidth/2 + self.range/2 - self.offsetX -- aligns mouse 0 with paddle 0
 	
@@ -42,6 +49,10 @@ function Paddle:update(dt)
 	end
 end
 
+function Paddle:bounceEffect()
+	self.bounceTimer = self.bounceTimerMax
+end
+
 function Paddle:draw()
 	local scrnWidth, scrnHeight = love.graphics.getDimensions()
 	
@@ -51,4 +62,10 @@ function Paddle:draw()
 	love.graphics.rectangle('fill', x, y, self.width, self.height)
 	love.graphics.setColor(225, 255, 224)
 	love.graphics.rectangle('line', x, y, self.width, self.height)
+	
+	if self.bounceTimer > 0 then
+		love.graphics.setColor(225, 255, 224, (255/self.bounceTimerMax+1)*self.bounceTimer)
+		local ox = 4 + math.floor(self.bounceTimerMax-self.bounceTimer)*5
+		love.graphics.rectangle('line', x-ox, y-ox, self.width+ox*2, self.height+ox*2)
+	end
 end

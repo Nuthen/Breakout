@@ -106,6 +106,8 @@ function Ball:update(dt)
 				local paddleHitPercentage = (self.x-paddle.x)/paddle.width -- goes from about -.5 to .5
 				self.angle = math.rad(160)*paddleHitPercentage-math.rad(80) -- range vargies from about -80 degress to 80 degrees
 				vx, vy = math.cos(self.angle)*self.speed*dt, math.sin(self.angle)*self.speed*dt
+				
+				paddle:bounceEffect()
 			end
 			
 			
@@ -116,16 +118,19 @@ function Ball:update(dt)
 			for iy = 1, #map.tiles do
 				for ix = 1, #map.tiles[iy] do
 					local tile = map.tiles[iy][ix]
-					if tile.tile == 1 then
+					if tile.tile ~= 0 then
 						local width, height = map.tileWidth, map.tileHeight
 						local x = x + (ix-1)*width
 						local y = y + (iy-1)*height
 						
 						if self.x - self.width/2 < x + width and self.x + self.width/2 > x and self.y - self.height/2 < y + height and self.y + self.height/2 > y then -- colliding with tile
-							tile.tile = 0 -- "deletes" tile, invisible with no collisions
-							--self.speed = self.speed + 10
-							tileX = ix
-							tileY = iy
+							if tile.tile == 1 then
+								tile.tile = 0 -- "deletes" tile, invisible with no collisions
+							
+								--self.speed = self.speed + 10
+								tileX = ix
+								tileY = iy
+							end
 							
 							-- find which side
 							local extra = 5 -- how far to allow inward for side detection (the ball will go partly into the tile)
@@ -225,16 +230,19 @@ function Ball:update(dt)
 			for iy = 1, #map.tiles do
 				for ix = 1, #map.tiles[iy] do
 					local tile = map.tiles[iy][ix]
-					if tile.tile == 1 then
+					if tile.tile ~= 0 then
 						local width, height = map.tileWidth, map.tileHeight
 						local x = x + (ix-1)*width
 						local y = y + (iy-1)*height
 						
 						if self.x - self.width/2 < x + width and self.x + self.width/2 > x and self.y - self.height/2 < y + height and self.y + self.height/2 > y then -- colliding with tile
-							tile.tile = 0 -- "deletes" tile, invisible with no collisions
-							--self.speed = self.speed + 10
-							tileX = ix
-							tileY = iy
+							if tile.tile == 1 then
+								tile.tile = 0 -- "deletes" tile, invisible with no collisions
+								
+								--self.speed = self.speed + 10
+								tileX = ix
+								tileY = iy
+							end
 							
 							-- find which side
 							local extra = 5 -- how far to allow inward for side detection (the ball will go partly into the tile)
@@ -252,7 +260,7 @@ function Ball:update(dt)
 						end
 					end
 					
-					if tile.tile == 1 then
+					if tile.tile > 0 then
 						tilesLeft = tilesLeft + 1
 					end
 				end

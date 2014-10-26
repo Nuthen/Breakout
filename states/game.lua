@@ -3,14 +3,10 @@ game = {}
 function game:enter(prev, hosting)
 	love.graphics.setBackgroundColor(27, 171, 137)
 
-	local offsetX = -250
-    self.map = Map:new(5, 5, 450, 600, offsetX, true)
-	self.paddle = Paddle:new(450/2, 600-40, 450, 600, offsetX, true)
-	self.ball = Ball:new(450/2, 600-100, 450, 600, offsetX, true)
+	self.levels = require 'data.levels'
+	self.levelCount = 0
 	
-	self.map2 = Map:new(5, 5, 450, 600, -offsetX)
-	self.paddle2 = Paddle:new(450/2, 600-40, 450, 600, -offsetX, false)
-	self.ball2 = Ball:new(450/2, 600-100, 450, 600, -offsetX, false)
+	game:restart()
 	
 	
 	self.lastSendPaddle = 0
@@ -23,7 +19,6 @@ function game:enter(prev, hosting)
 	
 	self.state = 'waiting'
 	
-	self.levelCount = 1
 	
 	self.winner = nil
 	
@@ -32,7 +27,7 @@ function game:enter(prev, hosting)
 		self.ip = '*'
 		self.port = '22122'
 		
-		self.host = enet.host_create(self.ip..':'..self.port)
+		self.host = enet.host_create(self.ip..':'..self.port, 1)
 		
 		if self.host == nil then
 			error("Couldn't initialize host, there is probably another server running on that port")
@@ -49,8 +44,8 @@ function game:enter(prev, hosting)
 	
 	else
 		self.host = enet.host_create()
-		self.server = self.host:connect('69.137.215.69:22122')
-		--self.server = self.host:connect('localhost:22122')
+		--self.server = self.host:connect('69.137.215.69:22122')
+		self.server = self.host:connect('localhost:22122')
 		self.host:compress_with_range_coder()
 		
 		self.timer = 0
@@ -62,33 +57,30 @@ function game:restart()
 
 	self.timer = 0
 
-	local offsetX = -250
-    self.map = Map:new(7, 15, 450, 600, offsetX, true)
-	self.paddle = Paddle:new(450/2, 600-40, 450, 600, offsetX, true)
-	self.ball = Ball:new(450/2, 600-100, 450, 600, offsetX, true)
+	local level = self.levels[self.levelCount] or self.levels[math.random(#self.levels)]
 	
-	self.map2 = Map:new(7, 15, 450, 600, -offsetX)
-	self.paddle2 = Paddle:new(450/2, 600-40, 450, 600, -offsetX, false)
-	self.ball2 = Ball:new(450/2, 600-100, 450, 600, -offsetX, false)
+	local offsetX = -level.realWidth*4/7
+    self.map = Map:new(level.width, level.height, level.realWidth, level.realHeight, offsetX, level.paddingTop, level.paddingBottom, level.paddingLeft, level.paddingRight)
+	self.paddle = Paddle:new(level.realWidth/2, level.realHeight-40, level.realWidth, level.realHeight, offsetX, true)
+	self.ball = Ball:new(level.realWidth/2, level.realHeight-100, level.realWidth, level.realHeight, offsetX, true)
+	
+	self.map2 = Map:new(level.width, level.height, level.realWidth, level.realHeight, -offsetX, level.paddingTop, level.paddingBottom, level.paddingLeft, level.paddingRight)
+	self.paddle2 = Paddle:new(level.realWidth/2, level.realHeight-40, level.realWidth, level.realHeight, -offsetX, false)
+	self.ball2 = Ball:new(level.realWidth/2, level.realHeight-100, level.realWidth, level.realHeight, -offsetX, false)
 	
 	
-	self.map.color1 = {math.random(255), math.random(255), math.random(255)}
-	self.map.color2 = {math.random(255), math.random(255), math.random(255)}
+	self.map.color1 = level.color1
+	self.map.color2 = level.color2
 	
-	self.map2.color1 = {math.random(255), math.random(255), math.random(255)}
-	self.map2.color2 = {math.random(255), math.random(255), math.random(255)}
+	self.map2.color1 = level.color1
+	self.map2.color2 = level.color2
 	
-	if self.levelCount == 3 then
-		for iy = 1, self.map.height do
-			for ix = 1, self.map.width do
-				-- assumes both maps are the same size
-				if ix > 2 and ix < self.map.width - 1 then
-					if iy % 3 < 2 then
-						self.map.tiles[iy][ix].tile = 0
-						self.map2.tiles[iy][ix].tile = 0
-					end
-				end
-			end
+	for iy = 1, #level.tiles do
+		self.map.tiles[iy] = {}
+		self.map2.tiles[iy] = {}
+		for ix = 1, #level.tiles[iy] do
+			self.map.tiles[iy][ix] = {tile = level.tiles[iy][ix]}
+			self.map2.tiles[iy][ix] = {tile = level.tiles[iy][ix]}
 		end
 	end
 end
@@ -130,6 +122,7 @@ function game:update(dt)
 					local iy = tonumber(tileTable[2])
 					local ix = tonumber(tileTable[1])
 					local tile = tonumber(tileTable[3])
+					
 					self.map2.tiles[iy][ix].tile = tile
 					
 				elseif string.find(event.data, 'r|') == 1 then -- True if it is paddle data 
@@ -154,7 +147,7 @@ function game:update(dt)
 				end
 				
 			elseif event.type == 'disconnect' then
-			
+				state.switch(menu, 'hostDisconnect')
 			end
 		end
 		
@@ -199,6 +192,7 @@ function game:update(dt)
 					local iy = tonumber(tileTable[2])
 					local ix = tonumber(tileTable[1])
 					local tile = tonumber(tileTable[3])
+					
 					self.map2.tiles[iy][ix].tile = tile
 					
 				elseif string.find(event.data, 'r|') == 1 then -- True if it is paddle data 
@@ -223,7 +217,7 @@ function game:update(dt)
 				end
 				
 			elseif event.type == 'disconnect' then
-			
+				state.switch(menu, 'clientDisconnect')
 			end
 		end
 	end
@@ -243,6 +237,10 @@ function game:update(dt)
 	
 		self.paddle:update(dt)
 		local tileX, tileY, tilesLeft = self.ball:update(dt)
+		
+		if tilesLeft then
+			self.tilesLeft = tilesLeft
+		end
 		
 		-- if a tile is removed, a packet is sent out
 		if tileX and tileY then
@@ -318,10 +316,21 @@ function game:draw()
 	self.paddle:draw()
 	self.ball:draw()
 	
+    love.graphics.setFont(fontBold[28])
+	
+	local x, y = love.graphics.getWidth()/2 - self.map.realWidth/2 + self.map.offsetX, love.graphics.getHeight()/2 + self.map.realHeight/2
+	love.graphics.print('You', x + 5, y + 5)
+	
 	-- Online Player
 	self.map2:draw()
 	self.paddle2:draw()
 	self.ball2:draw()
+	
+	local x, y = love.graphics.getWidth()/2 - self.map2.realWidth/2 + self.map2.offsetX, love.graphics.getHeight()/2 + self.map2.realHeight/2
+	love.graphics.print('Opponent', x + 5, y + 5)
+	
+	
+    love.graphics.setFont(fontBold[16])
 	
 	love.graphics.setColor(255, 255, 255)
 	love.graphics.print(love.timer.getFPS()..'FPS '..self.tilesLeft..' tiles', 5, 5)
@@ -347,5 +356,18 @@ function game:draw()
 	if self.state == 'restart' then
 		love.graphics.setFont(fontBold[32])
 		love.graphics.print(self.winner[1]..' won in '..math.floor(self.winner[2]*100)/100 ..' seconds!\nPrepare for a new round.', 200, 30)
+	end
+end
+
+
+function game:quit()
+	if self.peer then
+		if self.hosting then
+			self.peer:disconnect()
+			self.host:flush()
+		else
+			self.peer:disconnect()
+			self.host:flush()
+		end
 	end
 end
