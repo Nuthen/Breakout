@@ -44,8 +44,8 @@ function game:enter(prev, hosting)
 	
 	else
 		self.host = enet.host_create()
-		--self.server = self.host:connect('69.137.215.69:22122')
-		self.server = self.host:connect('localhost:22122')
+		self.server = self.host:connect('69.137.215.69:22122')
+		--self.server = self.host:connect('localhost:22122')
 		self.host:compress_with_range_coder()
 		
 		self.timer = 0
