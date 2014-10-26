@@ -14,7 +14,7 @@ function Paddle:initialize(x, y, range, domain, offsetX, localPlayer)
 	self.height = 15
 	
 	self.bounceTimer = 0
-	self.bounceTimerMax = 2
+	self.bounceTimerMax = .5
 end
 
 function Paddle:update(dt)
