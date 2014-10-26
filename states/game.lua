@@ -142,6 +142,7 @@ function game:update(dt)
 					
 					self.state = 'restart'
 					self.winner = {'Opponent', winTime}
+					self.host:flush()
 					game:restart()
 					return
 				end
@@ -212,6 +213,7 @@ function game:update(dt)
 					
 					self.state = 'restart'
 					self.winner = {'Opponent', winTime}
+					self.host:flush()
 					game:restart()
 					return
 				end
